@@ -6,4 +6,6 @@ This project uses `micromamba` to manage dependencies, once those are installed,
 
 
 Gif showing the code in action:
+
+
 ![](./content/tri_demo.gif)
