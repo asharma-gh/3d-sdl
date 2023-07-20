@@ -2,6 +2,7 @@
 #include "xtensor/xarray.hpp"
 #include "xtensor/xmath.hpp"
 #include "xtensor/xio.hpp"
+#include <xtensor/xaxis_slice_iterator.hpp>
 #include "xtensor-blas/xlinalg.hpp"
 #include <SDL2/SDL.h>
 #include <iostream>
@@ -44,43 +45,68 @@ main(int ac, char* av[])
                 xdeg = xd*mX;
                 xt::xarray<double> ydeg;
                 ydeg = yd*mY;
-                // compute Z rotation matrix
-                xt::xarray<double> xz {
+                // compute rotation matrix around x and y axis
+                xt::xarray<double> xdir { //rotating in the x direction is around the y axis
                     {xt::cos(xdeg)[0], 0, -1*(xt::sin(xdeg)[0])},
                     {0               , 1,  0                   },
                     {xt::sin(xdeg)[0], 0,  xt::cos(xdeg)[0]    }
                 };
-                xt::xarray<double> yz {
+                xt::xarray<double> ydir {
                     {1,   0,                   0               },
                     {0,   xt::cos(ydeg)[0],    xt::sin(ydeg)[0]},
                     {0,   -1*xt::sin(ydeg)[0], xt::cos(ydeg)[0]},
                 };
-                xt::xarray<double> tmat = xt::linalg::dot(xz,yz);
-                xt::xarray<double> tri = {
+                xt::xarray<double> tmat = xt::linalg::dot(xdir,ydir);
+                xt::xarray<double> tri_1 = {
                     {-100, 0, 0},
-                    {0, 100, 0},
+                    {0, 100, 100},
                     {100, 0, 0}
                 };
-                xt::xarray<double> res = xt::linalg::dot(tri,tmat);
-                // translate tri around screen center
-                xt::xarray<double> tri_sc = {
-                    {S_WIDTH/2, S_HEIGHT/2, 0}
+                xt::xarray<double> tri_2 = {
+                    {-100, 0, 200},
+                    {0, 100, 100},
+                    {100, 0, 200}
                 };
-                res = res + xt::view(tri_sc, 0);
+                xt::xarray<double> tri_3 = {
+                    {100, 0, 200},
+                    {0, 100, 100},
+                    {100, 0, 0}
+                };
+                xt::xarray<double> tri_4 = {
+                    {-100, 0, 200},
+                    {0, 100, 100},
+                    {-100, 0, 0}
+                };
+                std::vector<xt::xarray<double>*> tri_prism = {
+                    &tri_1,
+                    &tri_2,
+                    &tri_3,
+                    &tri_4
+                };
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderClear(renderer);
-                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-                // v1 -> v2
-                SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
-                        xt::view(res,1)[0], xt::view(res,1)[1]);
-                // v1 -> v3
-                SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
-                        xt::view(res,2)[0], xt::view(res,2)[1]);
-                // v2 -> v3
-                SDL_RenderDrawLine(renderer, xt::view(res,1)[0], xt::view(res,1)[1], 
-                        xt::view(res,2)[0], xt::view(res,2)[1]);
+                for (xt::xarray<double>* tri_ptr : tri_prism)
+                {
+                    xt::xarray<double> tri = *tri_ptr;
+                    xt::xarray<double> res = xt::linalg::dot(tri,tmat);
+                    // translate tri around screen center
+                    xt::xarray<double> tri_sc = {
+                        {S_WIDTH/2, S_HEIGHT/2, 0}
+                    };
+                    res = res + xt::view(tri_sc, 0);
 
+                    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+                    // v1 -> v2
+                    SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
+                            xt::view(res,1)[0], xt::view(res,1)[1]);
+                    // v1 -> v3
+                    SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
+                            xt::view(res,2)[0], xt::view(res,2)[1]);
+                    // v2 -> v3
+                    SDL_RenderDrawLine(renderer, xt::view(res,1)[0], xt::view(res,1)[1], 
+                            xt::view(res,2)[0], xt::view(res,2)[1]);
 
+                }
                 SDL_RenderPresent(renderer);
         }
     }
