@@ -1,7 +1,7 @@
 ## 3d-sdl
 3D graphics implementation using libSDL2
 
-## Building
+### Building
 This project uses `micromamba` to manage dependencies, once those are installed, use `make` to run.
 
 
