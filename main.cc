@@ -65,6 +65,8 @@ persp_proj(xt::xarray<double>& pts)
 int 
 main(int ac, char* av[])
 {
+    // test quats
+    
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         std::cout<<"SDL Init error! "<<SDL_GetError()<<std::endl;
@@ -134,12 +136,14 @@ main(int ac, char* av[])
                 ydeg = 3.14*mX;
                 LOG(mX, " ", mY);
                 LOG(xdeg, " ", ydeg);
+
+                auto res = Quat::rotate_vec(xt::xarray<double>{{0,1,0}}, xt::xarray<double>{{1,0,0}}, xdeg[0]);
+                LOG(res);
                 xt::xarray<double>::shape_type shape = {4, 4};
                 xt::xarray<double> q_rot = xt::xarray<double>::from_shape(shape);
                 xt::xarray<double> axis = {
                     {0,1,0,0}
                 };
-                init_rot_quaternion(q_rot, axis, xdeg[0]); 
                 //LOG(q_rot);
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderClear(renderer);
@@ -151,7 +155,6 @@ main(int ac, char* av[])
                     //res /= norm;
                     //quaternion_rot(res, q_rot);
                     //res *= 200;
-                    LOG(res);
                     //persp_proj(res);
                     //std::cout<<xt::adapt(tri.shape())<<std::endl;
                     // translate tri around screen center
@@ -177,6 +180,8 @@ main(int ac, char* av[])
         }
         cur_ticks += (SDL_GetTicks() - tick_start);
     }
+
+
     SDL_DestroyWindow(w);
     SDL_Quit();
     return 0;
