@@ -3,34 +3,24 @@
 void 
 quaternion_mat(const xt::xarray<double>& qa, const xt::xarray<double>& qb, xt::xarray<double>& out)
 {
-    double w,x,y,z;
-    w = (qa(3,3)*qb(3,3)) - (qa(0,0)*qb(0,0)) - (qa(1,1)*qb(1,1)) - (qa(2,2)*qb(2,2));
-    x = (qa(3,3)*qb(0,0)) + (qa(0,0)*qb(3,3)) + (qa(1,1)*qb(2,2)) - (qa(2,2)*qb(1,1));
-    y = (qa(3,3)*qb(1,1)) - (qa(0,0)*qb(2,2)) + (qa(1,1)*qb(3,3)) + (qa(2,2)*qb(0,0));
-    z = (qa(3,3)*qb(2,2)) + (qa(0,0)*qb(1,1)) - (qa(1,1)*qb(0,0)) + (qa(2,2)*qb(3,3));
-
-    out(0,0) = x;
-    out(1,1) = y;
-    out(2,2) = z;
-    out(3,3) = w;
 }
 
 void
 init_rot_quaternion(xt::xarray<double>& in_quat, xt::xarray<double> axis_cp, double angle)
 {
-    axis_cp = axis_cp / xt::linalg::norm(axis_cp, 2);
+    /*axis_cp = axis_cp / xt::linalg::norm(axis_cp, 2);
     xt::xarray<double> theta_2 = angle/2;
     for (int ii=0;ii<3;ii++)
     {
         in_quat(ii,ii) = axis_cp(ii) * xt::sin(theta_2)[0];
     }
-    in_quat(3,3) = xt::cos(theta_2)[0]; // w
+    in_quat(3,3) = xt::cos(theta_2)[0]; // w*/
 }
 
 void
 quaternion_rot(xt::xarray<double>& pts, const xt::xarray<double>& q_rot)
 {
-    double norm_2sq = xt::linalg::norm(q_rot, 2);
+    /*double norm_2sq = xt::linalg::norm(q_rot, 2);
     norm_2sq *= norm_2sq;
     xt::xarray<double> conj_mat = {
         {-1, 0, 0, 0},
@@ -43,11 +33,13 @@ quaternion_rot(xt::xarray<double>& pts, const xt::xarray<double>& q_rot)
     quaternion_mat(pts, q_conj, pts);
     for(int ii=0;ii<3;ii++)
         pts(ii,ii) /= norm_2sq;
-}
+*/}
+
 void 
 world_to_cam(xt::xarray<double>& pts)
 {
 }
+
 void 
 persp_proj(xt::xarray<double>& pts)
 {
@@ -86,7 +78,7 @@ main(int ac, char* av[])
     bool quit = false;
     uint64_t cur_ticks = 0;
     bool is_frame = false;
-    while(quit == false)
+    while (quit == false)
     { 
         uint64_t tick_start = SDL_GetTicks();
         if ((cur_ticks / 1000) >= 1/60)
@@ -101,8 +93,8 @@ main(int ac, char* av[])
             {
                 cam_vel_x += (-1 * (cam_vel_x < 0) + (cam_vel_x > 0)) * cam_rev_accel;
             }
-            cam_pos_w(2,2) += cam_vel; // z dir
-            cam_pos_w(0,0) += cam_vel_x; // x dir
+            cam_pos.world(2,2) += cam_vel; // z dir
+            cam_pos.world(0,0) += cam_vel_x; // x dir
             // update camera physics
             cur_ticks = 0; // reset tick counter for next frame
         }
@@ -151,7 +143,7 @@ main(int ac, char* av[])
                 //LOG(q_rot);
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderClear(renderer);
-                for (xt::xarray<double>* tri_ptr : tri_prism)
+                for (xt::xarray<double>* tri_ptr : tri_prism_tf.obj)
                 {
                     xt::xarray<double> tri = *tri_ptr;
                     xt::xarray<double> res = tri;
