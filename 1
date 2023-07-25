@@ -1,0 +1,176 @@
+
+#include "xtensor/xarray.hpp"
+#include "xtensor/xadapt.hpp"
+#include "xtensor/xmath.hpp"
+#include "xtensor/xio.hpp"
+#include <xtensor/xaxis_slice_iterator.hpp>
+#include "xtensor-blas/xlinalg.hpp"
+#include <SDL2/SDL.h>
+#include <iostream>
+#include <string>
+#include <vector>
+// TODO: World coord system which is only positive
+// Camera coord system
+// Viewport coord system
+const int S_WIDTH = 800;
+const int S_HEIGHT = 600;
+/// Camera Parameters
+/// Non-const so they can be changed at runtime in the future!
+xt::xarray<double> fovDeg = 3.14/2;
+float aspectRatio = S_WIDTH / S_HEIGHT;
+float znear = 0.1; // Lower bound for object zpos from camera
+float zfar = 500; // Upper bound for object zpos
+float fovx = (aspectRatio*xt::tan(fovDeg/2)[0]);
+xt::xarray<double> projMat = {
+    {1,0,0,0},
+    {0,1,0,0},
+    {0,0,-1*(znear+zfar)/(zfar-znear), -1},
+    {0,0,-zfar*znear/(zfar-znear), 0}
+};
+xt::xarray<double> cam_pos = {
+    {0, 50, -200}
+};
+
+void persp_proj(xt::xarray<double>& pts)
+{
+
+    //pts = xt::linalg::dot(pts, projMat);
+    
+    for (int ii=0;ii<3;ii++)
+    {
+        double s = pts(ii,3); // w
+        //if (s <= 0)
+        //    continue;
+        std::cout<<pts<<std::endl;
+        s=1/s;
+        pts(ii,0)= pts(ii, 0) * s;
+        std::cout<<s<<"AFTER "<<pts(ii, 0) *s<<std::endl;
+       // r[1] = r[1]*s;
+       // r[2] = r[2]*s;
+        
+    }
+}
+
+int 
+main(int ac, char* av[])
+{
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
+        std::cout<<"SDL Init error! "<<SDL_GetError()<<std::endl;
+        return -1;
+    }
+    SDL_Window* w = SDL_CreateWindow("3D Render",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,S_WIDTH,S_HEIGHT,SDL_WINDOW_SHOWN);
+    // setup Renderer
+    SDL_Renderer*  renderer = SDL_CreateRenderer(w,-1,SDL_RENDERER_ACCELERATED);
+    // Event handling
+    SDL_Event event; 
+    bool quit = false;
+    while(quit == false)
+    { 
+        SDL_WaitEvent(&event);
+        switch (event.type)
+        {
+            case SDL_QUIT:
+                quit = true;
+                break;
+            case SDL_MOUSEMOTION:
+                // TODO: Setup render thread
+                int mX = event.motion.x - S_WIDTH/2;
+                int mY = -1*event.motion.y + S_HEIGHT/2;
+                // scalars are 1d arrays in xt
+                double xd = 2*3.14/(S_WIDTH); // each pixel in range [0, pi]
+                double yd = 2*3.14/(S_HEIGHT); 
+                xt::xarray<double> xdeg;
+                xdeg = xd*mY;
+                xt::xarray<double> ydeg;
+                ydeg = yd*mX;
+                // compute rotation matrix around x and y axis
+                xt::xarray<double> zdir { //rotating in the x direction is around the z axis
+                    {xt::cos(xdeg)[0], -1*xt::sin(xdeg)[0], 0, 0},
+                    {xt::sin(xdeg)[0], xt::cos(xdeg)[0], 0, 0},
+                    {0, 0, 1, 0},
+                    {0, 0, 0, 1}
+                };
+
+               xt::xarray<double> ydir {
+                    {xt::cos(ydeg)[0], -1*xt::sin(ydeg)[0], 0, 0},
+                    {0,                  -1, 0,                0},
+                    {xt::sin(ydeg)[0], 0, xt::cos(ydeg)[0], 0},
+                    {0,                   0, 0,                1}
+                };
+               /*
+                xt::xarray<double> xdir {
+                    {1, 0, 0, 0},
+                    {0, xt::cos(ydeg)[0], -1*xt::sin(ydeg)[0], 0},
+                    {0, xt::sin(ydeg)[0], xt::cos(ydeg)[0], 0},
+                    {0, 0, 0, 1}
+                };*/
+
+                xt::xarray<double> tmat = xt::linalg::dot(zdir,ydir);
+                xt::xarray<double> tri_1 = {
+                    {-100, 0, 100, 1},
+                    {0, 100, 200, 1},
+                    {100, 0, 100, 1},
+                    {0,   0, 0, 1}
+                };
+                xt::xarray<double> tri_2 = {
+                    {-100, 0, 300, 1},
+                    {0, 100, 200, 1},
+                    {100, 0, 300, 1},
+                    {0,   0, 0, 1}
+                };
+                xt::xarray<double> tri_3 = {
+                    {100, 0, 300, 1},
+                    {0, 100, 200, 1},
+                    {100, 0, 100, 1},
+                    {0,   0, 0, 1}
+                };
+                xt::xarray<double> tri_4 = {
+                    {-100, 0, 300, 1},
+                    {0, 100, 200, 1},
+                    {-100, 0, 100, 1},
+                    {0,    0, 0, 1}
+                };
+                std::vector<xt::xarray<double>*> tri_prism = {
+                    &tri_1,
+                    &tri_2,
+                    &tri_3,
+                    &tri_4
+                };
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                SDL_RenderClear(renderer);
+                for (xt::xarray<double>* tri_ptr : tri_prism)
+                {
+                    xt::xarray<double> tri = *tri_ptr;
+                    xt::xarray<double> res;
+                    res = xt::linalg::dot(tri,tmat);
+                    persp_proj(res);
+                    //std::cout<<xt::adapt(tri.shape())<<std::endl;
+                    // translate tri around screen center
+                    xt::xarray<double> tri_sc = {
+                        {S_WIDTH/2, S_HEIGHT/2, 0, 0}
+                    };
+                    res = res+xt::view(tri_sc, 0);
+                    //persp proj
+                    // Calculate Camera Transform
+                    //res = res - cam_pos;
+                    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+                    // v1 -> v2
+                    SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
+                            xt::view(res,1)[0], xt::view(res,1)[1]);
+                    // v1 -> v3
+                    SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
+                            xt::view(res,2)[0], xt::view(res,2)[1]);
+                    // v2 -> v3
+                    SDL_RenderDrawLine(renderer, xt::view(res,1)[0], xt::view(res,1)[1], 
+                            xt::view(res,2)[0], xt::view(res,2)[1]);
+
+                }
+                SDL_RenderPresent(renderer);
+        }
+    }
+    SDL_DestroyWindow(w);
+    SDL_Quit();
+    return 0;
+}
+
