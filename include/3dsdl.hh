@@ -86,7 +86,6 @@ struct Quat {
     }
     Quat& operator*=(const Quat& rhs)
     {
-
         // Given a[sa, av] b[sb, bv]
         // a*b=[sa*sb - a dot b, sa*bv + sb*av + a cross b]
         double wtemp = this->w*rhs.w - xt::linalg::dot(this->vec3,xt::transpose(rhs.vec3))[0];
@@ -108,13 +107,13 @@ struct Quat {
         res.w /= rhs;
         return res;
     }
+
 //////////////////////
 /// Library functions
     double norm() const
     {
         return sqrt(w*w + xt::linalg::norm(this->vec3, 2));
     }
-
     void normalize()
     {
         double tnorm = this->norm();
@@ -139,8 +138,6 @@ struct Quat {
 
 /////////////////////
 /// Static functions
-////////////////////
-
 
     // usage: Quat::rotate_vec(xt::xarray<double>{{0,1,0}}, xt::xarray<double>{{1,0,0}}, pi/2); => ~[0, 0, 1]
     static const xt::xarray<double> rotate_vec(const xt::xarray<double>& invec, const xt::xarray<double>& axis, double theta)

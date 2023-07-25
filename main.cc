@@ -1,39 +1,5 @@
 #include "3dsdl.hh"
 
-void 
-quaternion_mat(const xt::xarray<double>& qa, const xt::xarray<double>& qb, xt::xarray<double>& out)
-{
-}
-
-void
-init_rot_quaternion(xt::xarray<double>& in_quat, xt::xarray<double> axis_cp, double angle)
-{
-    /*axis_cp = axis_cp / xt::linalg::norm(axis_cp, 2);
-    xt::xarray<double> theta_2 = angle/2;
-    for (int ii=0;ii<3;ii++)
-    {
-        in_quat(ii,ii) = axis_cp(ii) * xt::sin(theta_2)[0];
-    }
-    in_quat(3,3) = xt::cos(theta_2)[0]; // w*/
-}
-
-void
-quaternion_rot(xt::xarray<double>& pts, const xt::xarray<double>& q_rot)
-{
-    /*double norm_2sq = xt::linalg::norm(q_rot, 2);
-    norm_2sq *= norm_2sq;
-    xt::xarray<double> conj_mat = {
-        {-1, 0, 0, 0},
-        {0, -1, 0, 0},
-        {0, 0, -1, 0},
-        {0, 0, 0,  1}
-    };
-    xt::xarray<double> q_conj = xt::linalg::dot(q_rot, conj_mat);
-    quaternion_mat(pts, q_rot, pts);
-    quaternion_mat(pts, q_conj, pts);
-    for(int ii=0;ii<3;ii++)
-        pts(ii,ii) /= norm_2sq;
-*/}
 
 void 
 world_to_cam(xt::xarray<double>& pts)
@@ -43,23 +9,6 @@ world_to_cam(xt::xarray<double>& pts)
 void 
 persp_proj(xt::xarray<double>& pts)
 {
-
-    std::cout<<"BEFORE "<<pts<<std::endl;
-    pts = xt::linalg::dot(pts, projMat);
-
-    for (int ii=0;ii<3;ii++)
-    {
-        double s = pts(ii,3); // w
-        if (s <= 0)
-            continue;
-        s=1/s;
-        pts(ii,0) *= s*S_WIDTH/2;
-        pts(ii,1) *= s*S_HEIGHT/2;
-        std::cout<<"AFTER "<<pts<<std::endl;
-        // r[1] = r[1]*s;
-        // r[2] = r[2]*s;
-
-    }
 }
 
 int 
@@ -137,7 +86,6 @@ main(int ac, char* av[])
                 LOG(mX, " ", mY);
                 LOG(xdeg, " ", ydeg);
 
-                auto res = Quat::rotate_vec(xt::xarray<double>{{0,1,0}}, xt::xarray<double>{{1,0,0}}, xdeg[0]);
                 LOG(res);
                 xt::xarray<double>::shape_type shape = {4, 4};
                 xt::xarray<double> q_rot = xt::xarray<double>::from_shape(shape);
