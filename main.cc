@@ -85,8 +85,6 @@ main(int ac, char* av[])
                 ydeg = 3.14*mX;
                 LOG(mX, " ", mY);
                 LOG(xdeg, " ", ydeg);
-
-                LOG(res);
                 xt::xarray<double>::shape_type shape = {4, 4};
                 xt::xarray<double> q_rot = xt::xarray<double>::from_shape(shape);
                 xt::xarray<double> axis = {
@@ -95,17 +93,18 @@ main(int ac, char* av[])
                 //LOG(q_rot);
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderClear(renderer);
+                // Rotate the tri prism
+                /*auto t_1 = Quat::rotate_vec(
+                                    tri_prism_tf.local_vec3(),
+                                    xt::xarray<double>{{0,1,0}}, 
+                                    xdeg[0]
+                            );
+                tri_prism_tf.update_local_from_vec3(t_1);*/
+                // TODO:
                 for (xt::xarray<double>* tri_ptr : tri_prism_tf.obj)
                 {
                     xt::xarray<double> tri = *tri_ptr;
                     xt::xarray<double> res = tri;
-                    double norm = xt::linalg::norm(res, 2);
-                    //res /= norm;
-                    //quaternion_rot(res, q_rot);
-                    //res *= 200;
-                    //persp_proj(res);
-                    //std::cout<<xt::adapt(tri.shape())<<std::endl;
-                    // translate tri around screen center
                     xt::xarray<double> tri_sc = {
                         {S_WIDTH/2, S_HEIGHT/2, 0, 0}
                     };

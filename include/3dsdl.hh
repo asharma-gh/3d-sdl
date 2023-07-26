@@ -1,11 +1,14 @@
 #pragma once
+#include "quat.hh"
+
 #include "xtensor/xarray.hpp"
 #include "xtensor/xadapt.hpp"
 #include "xtensor/xmath.hpp"
 #include "xtensor/xio.hpp"
-#include <xtensor/xaxis_slice_iterator.hpp>
+#include "xtensor/xaxis_slice_iterator.hpp"
 #include "xtensor-blas/xlinalg.hpp"
-#include <SDL2/SDL.h>
+#include "SDL2/SDL.h"
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -22,6 +25,8 @@ LOG(Args && ...args)
 /// Transform base class
 //////////////////////////////////////
 struct Tform {
+    Quat local_rot_q;
+    xt::xarray<double> scale = {{1,1,1}};
     xt::xarray<double> local = {
         {0,0,0,0},
         {0,0,0,0},
@@ -38,7 +43,29 @@ struct Tform {
     Tform() {}
     Tform(std::vector<xt::xarray<double>*> in_obj)
         : obj(in_obj) {}
-
+   
+    void rotate_along_axis_q(const xt::xarray<double>& axis, double theta)
+    {
+        Quat rot_q = Quat::get_rotation_quat(axis, theta);
+        // apply to local coordinates
+        xt::xarray<double> updated_loc_v = Quat::apply_rotation_quat(rot_q, this->local_vec3());
+        this->update_local_from_vec3(updated_loc_v);
+        // apply to current rotation
+        this->local_rot_q *= rot_q;
+        // apply to world
+        xt::xarray<double> updated_world_v = Quat::apply_rotation_quat(rot_q, this->world_vec3());
+        this->update_world_from_vec3(updated_world_v);
+    }
+    void update_local_from_vec3(const xt::xarray<double>& invec)
+    {
+        for (int ii = 0;ii<3;ii++)
+            local(ii,ii)=invec(ii);
+    }
+    void update_world_from_vec3(const xt::xarray<double>& invec)
+    {
+        for (int ii = 0;ii<3;ii++)
+            world(ii,ii)=invec(ii);
+    }
     const xt::xarray<double> local_vec3() const 
     {
         return xt::xarray<double> {{local(0,0), local(1,1), local(2,2)}};
@@ -47,116 +74,7 @@ struct Tform {
     {
         return xt::xarray<double> {{local(0,0), local(1,1), local(2,2)}};
     }
-
-};
-///////////////////////////////////////
-/// Quaternion base class
-//////////////////////////////////////
-struct Quat {
-    xt::xarray<double> vec3 = {{0,0,0}};
-    double w = 1;
-    Quat() {}
-    Quat(double w, const xt::xarray<double>& invec3)
-        : vec3(invec3), w(w) {}
-
-///////////////////////
-/// Operator overrides
-    friend std::ostream &operator<<(std::ostream &os, const Quat& qin)
-    {
-        return os << qin.w << " " << qin.vec3;
-
-    }
-    Quat& operator=(const Quat& rhs)
-    {
-        this->vec3 = rhs.vec3;
-        this->w = rhs.w;
-        return *this;
-    }
-    Quat& operator+=(const Quat& rhs)
-    {
-        this->vec3 += rhs.vec3;
-        this->w += rhs.w;
-        return *this;
-    }
-    const Quat operator+(const Quat &rhs) const
-    {
-        Quat res = *this; // copy
-        res += rhs;
-        return res;
-    }
-    Quat& operator*=(const Quat& rhs)
-    {
-        // Given a[sa, av] b[sb, bv]
-        // a*b=[sa*sb - a dot b, sa*bv + sb*av + a cross b]
-        double wtemp = this->w*rhs.w - xt::linalg::dot(this->vec3,xt::transpose(rhs.vec3))[0];
-        this->vec3 = (this->w*rhs.vec3) + (rhs.w*this->vec3) + xt::linalg::cross(this->vec3, rhs.vec3);
-        this->w = wtemp;
-
-        return *this;
-    }
-    const Quat operator*(const Quat& rhs) const
-    {
-        Quat res = *this; // copy
-        res *= rhs;
-        return res;
-    }
-    const Quat operator/(double rhs) const
-    {
-        Quat res = *this; // copy
-        res.vec3 /= rhs;
-        res.w /= rhs;
-        return res;
-    }
-
-//////////////////////
-/// Library functions
-    double norm() const
-    {
-        return sqrt(w*w + xt::linalg::norm(this->vec3, 2));
-    }
-    void normalize()
-    {
-        double tnorm = this->norm();
-        if (tnorm == 0)
-            return;
-        tnorm = 1/tnorm;
-        this->w *= tnorm;
-        this->vec3 *= tnorm;
-    }
-    const Quat conjugate() const 
-    {
-        return Quat(this->w, this->vec3 * -1);
-    }
-    const Quat inverse() const 
-    {
-        // q_inv = q_conj / norm^2
-        double tnorm = this->norm();
-        tnorm *= tnorm;
-
-        return this->conjugate() / tnorm;
-    }
-
-/////////////////////
-/// Static functions
-
-    // usage: Quat::rotate_vec(xt::xarray<double>{{0,1,0}}, xt::xarray<double>{{1,0,0}}, pi/2); => ~[0, 0, 1]
-    static const xt::xarray<double> rotate_vec(const xt::xarray<double>& invec, const xt::xarray<double>& axis, double theta)
-    {   
-        // create pure quaternion from tform
-        Quat tform_l = Quat(0, invec);
-        // axis of rotation
-        xt::xarray<double> uaxis = axis / xt::linalg::norm(axis, 2);
-        Quat rot_q = Quat(theta, uaxis);
-        rot_q.w = xt::cos(xt::xarray<double>({theta*.5}))[0];
-        rot_q.vec3 *= xt::sin(xt::xarray<double>({theta*.5}))[0];
-        Quat rot_q_inv = rot_q.inverse();
-        // perform rotation
-        tform_l=(rot_q*tform_l)*rot_q_inv;
-        // return transformed vector
-        return tform_l.vec3;
-    }
-};
-
+};//end struct
 ///////////////////////////
 const int S_WIDTH = 800;
 const int S_HEIGHT = 600;
