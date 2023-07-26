@@ -28,9 +28,9 @@ struct Tform {
     Quat local_rot_q;
     xt::xarray<double> scale = {{1,1,1}};
     xt::xarray<double> local = {
-        {0,0,0,0},
-        {0,0,0,0},
-        {0,0,0,0},
+        {2,0,0,0},
+        {0,2,0,0},
+        {0,0,5,0},
         {0,0,0,1}
     };
     xt::xarray<double> world = {
@@ -53,8 +53,33 @@ struct Tform {
         // apply to current rotation
         this->local_rot_q *= rot_q;
         // apply to world
-        xt::xarray<double> updated_world_v = Quat::apply_rotation_quat(rot_q, this->world_vec3());
-        this->update_world_from_vec3(updated_world_v);
+        this->local_to_world();
+    }
+    void local_to_world()
+    {  
+        xt::xarray<double> lvec= this->local_vec3();
+        xt::xarray<double> tmat = {
+            {1, 0, 0, lvec[0]},
+            {0, 1, 0, lvec[1]},
+            {0, 0, 1, lvec[2]},
+            {0, 0, 0, 1},
+        };
+        // construct rotation matrix
+        xt::xarray<double> xbasis = {{1,0,0}};
+        xt::xarray<double> ybasis = {{0,1,0}};
+        xt::xarray<double> zbasis = {{0,0,1}};
+        xbasis = Quat::apply_rotation_quat(this->local_rot_q, xbasis);
+        ybasis = Quat::apply_rotation_quat(this->local_rot_q, ybasis);
+        zbasis = Quat::apply_rotation_quat(this->local_rot_q, zbasis);
+        xt::xarray<double> rotation_mat = xt::stack(xt::xtuple(xbasis, ybasis, zbasis)).reshape({3,3});
+        // combine rotation and scale matrix
+        for (int ii=0;ii<3;ii++)
+            rotation_mat(ii,ii) *= scale(ii);
+        // fetch 3x3 section of local->world mat
+        auto mat_view3x3 = xt::view(tmat, xt::range(0, 3), xt::range(0, 3));
+        mat_view3x3 = rotation_mat;
+        // Apply to world coordinates
+        this->world = xt::linalg::dot(tmat, this->world);
     }
     void update_local_from_vec3(const xt::xarray<double>& invec)
     {

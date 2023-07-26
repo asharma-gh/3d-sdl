@@ -14,8 +14,6 @@ persp_proj(xt::xarray<double>& pts)
 int 
 main(int ac, char* av[])
 {
-    // test quats
-    
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         std::cout<<"SDL Init error! "<<SDL_GetError()<<std::endl;
