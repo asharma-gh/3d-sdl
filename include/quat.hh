@@ -93,7 +93,6 @@ struct Quat {
 
 /////////////////////
 /// Static functions
-
     static const Quat get_rotation_quat(const xt::xarray<double>& axis, double theta)
     {   
         // axis of rotation

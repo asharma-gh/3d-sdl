@@ -28,21 +28,26 @@ struct Tform {
     Quat local_rot_q;
     xt::xarray<double> scale = {{1,1,1}};
     xt::xarray<double> local = {
-        {2,0,0,0},
-        {0,2,0,0},
-        {0,0,5,0},
+        {1,0,0,0},
+        {0,1,0,0},
+        {0,0,1,0},
         {0,0,0,1}
     };
     xt::xarray<double> world = {
-        {0,0,0,0},
-        {0,0,0,0},
-        {0,0,0,0},
+        {1,0,0,0},
+        {0,1,0,0},
+        {0,0,1,0},
         {0,0,0,1}
     };
-    std::vector<xt::xarray<double>*> obj; // Object in model space
+    std::vector<xt::xarray<double>*> obj; // Object in model space 
+    std::vector<xt::xarray<double>> obj_w; // Object in world space
     Tform() {}
     Tform(std::vector<xt::xarray<double>*> in_obj)
-        : obj(in_obj) {}
+        : obj(in_obj) 
+    {
+        for (int ii = 0; ii < obj.size(); ii++)
+            this->obj_w.push_back(*(this->obj[ii]));
+    }
    
     void rotate_along_axis_q(const xt::xarray<double>& axis, double theta)
     {
@@ -56,7 +61,7 @@ struct Tform {
         this->local_to_world();
     }
     void local_to_world()
-    {  
+    { 
         xt::xarray<double> lvec= this->local_vec3();
         xt::xarray<double> tmat = {
             {1, 0, 0, lvec[0]},
@@ -71,15 +76,26 @@ struct Tform {
         xbasis = Quat::apply_rotation_quat(this->local_rot_q, xbasis);
         ybasis = Quat::apply_rotation_quat(this->local_rot_q, ybasis);
         zbasis = Quat::apply_rotation_quat(this->local_rot_q, zbasis);
+
         xt::xarray<double> rotation_mat = xt::stack(xt::xtuple(xbasis, ybasis, zbasis)).reshape({3,3});
         // combine rotation and scale matrix
         for (int ii=0;ii<3;ii++)
             rotation_mat(ii,ii) *= scale(ii);
+
+        
+        LOG(this->local_rot_q);
         // fetch 3x3 section of local->world mat
         auto mat_view3x3 = xt::view(tmat, xt::range(0, 3), xt::range(0, 3));
         mat_view3x3 = rotation_mat;
+
         // Apply to world coordinates
         this->world = xt::linalg::dot(tmat, this->world);
+        // Apply to object
+        for (int ii = 0; ii < obj.size(); ii++)
+        {
+            this->obj_w.push_back(xt::linalg::dot(this->world, *(this->obj[ii])));
+        }
+
     }
     void update_local_from_vec3(const xt::xarray<double>& invec)
     {
@@ -151,9 +167,9 @@ xt::xarray<double> tri_4 = {
 };
 std::vector<xt::xarray<double>*> tobj = {
     &tri_1,
-   // &tri_2,
-   // &tri_3,
-  //  &tri_4
+    &tri_2,
+    &tri_3,
+    &tri_4
 };
 Tform tri_prism_tf(tobj);
 

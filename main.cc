@@ -83,25 +83,19 @@ main(int ac, char* av[])
                 ydeg = 3.14*mX;
                 LOG(mX, " ", mY);
                 LOG(xdeg, " ", ydeg);
-                xt::xarray<double>::shape_type shape = {4, 4};
-                xt::xarray<double> q_rot = xt::xarray<double>::from_shape(shape);
-                xt::xarray<double> axis = {
-                    {0,1,0,0}
-                };
                 //LOG(q_rot);
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderClear(renderer);
                 // Rotate the tri prism
-                /*auto t_1 = Quat::rotate_vec(
-                                    tri_prism_tf.local_vec3(),
-                                    xt::xarray<double>{{0,1,0}}, 
-                                    xdeg[0]
-                            );
-                tri_prism_tf.update_local_from_vec3(t_1);*/
-                // TODO:
-                for (xt::xarray<double>* tri_ptr : tri_prism_tf.obj)
+                if (is_frame)
                 {
-                    xt::xarray<double> tri = *tri_ptr;
+                    //tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{0,1,0}}, 3.14/2);
+                    Quat rot_q = Quat::get_rotation_quat(xt::xarray<double>{{0,1,0}}, 3.14/2);
+                    LOG(rot_q); 
+                    LOG(Quat::apply_rotation_quat(rot_q, xt::xarray<double>{{1,0,0}}));
+                }
+                for (xt::xarray<double> tri : tri_prism_tf.obj_w)
+                {
                     xt::xarray<double> res = tri;
                     xt::xarray<double> tri_sc = {
                         {S_WIDTH/2, S_HEIGHT/2, 0, 0}
