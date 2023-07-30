@@ -52,8 +52,6 @@ struct Tform {
     void rotate_along_axis_q(const xt::xarray<double>& axis, double theta)
     {
         Quat rot_q = Quat::get_rotation_quat(axis, theta);
-        //xt::xarray<double> rotation_mat = rot_q.get_rotation_matrix_q();
-        //LOG(rotation_mat);
         xt::xarray<double> centroid = this->get_centroid();
         for (int ii = 0; ii < obj_w.size(); ii++)
         {

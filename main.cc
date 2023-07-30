@@ -1,16 +1,5 @@
 #include "3dsdl.hh"
 
-
-void 
-world_to_cam(xt::xarray<double>& pts)
-{
-}
-
-void 
-persp_proj(xt::xarray<double>& pts)
-{
-}
-
 int 
 main(int ac, char* av[])
 {
@@ -81,9 +70,8 @@ main(int ac, char* av[])
                 xdeg = 3.14*2*mY;
                 xt::xarray<double> ydeg;
                 ydeg = 3.14*2*mX;
-                LOG(mX, " ", mY);
+                //LOG(mX, " ", mY);
                 //LOG(xdeg, " ", ydeg);
-                //LOG(q_rot);
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderClear(renderer);
                 // Rotate the tri prism
@@ -102,9 +90,6 @@ main(int ac, char* av[])
                         {S_WIDTH/2, S_HEIGHT/2, 0, 0}
                     };
                     res = res+xt::view(tri_sc, 0);
-                    //persp proj
-                    // Calculate Camera Transform
-                    //res = res - cam_pos;
                     // v1 -> v2
                     SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
                             xt::view(res,1)[0], xt::view(res,1)[1]);
