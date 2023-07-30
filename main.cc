@@ -78,22 +78,23 @@ main(int ac, char* av[])
                 double mY = double(-1*event.motion.y + S_HEIGHT/2)/S_HEIGHT/2;
                 // scalars are 1d arrays in xt
                 xt::xarray<double> xdeg;
-                xdeg = 3.14*mY;
+                xdeg = 3.14*2*mY;
                 xt::xarray<double> ydeg;
-                ydeg = 3.14*mX;
+                ydeg = 3.14*2*mX;
                 LOG(mX, " ", mY);
-                LOG(xdeg, " ", ydeg);
+                //LOG(xdeg, " ", ydeg);
                 //LOG(q_rot);
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderClear(renderer);
                 // Rotate the tri prism
                 if (is_frame)
                 {
-                    //tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{0,1,0}}, 3.14/2);
-                    Quat rot_q = Quat::get_rotation_quat(xt::xarray<double>{{0,1,0}}, 3.14/2);
-                    LOG(rot_q); 
-                    LOG(Quat::apply_rotation_quat(rot_q, xt::xarray<double>{{1,0,0}}));
+                    tri_prism_tf.reset_transforms();
+                    tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{1,0,0}}, xdeg[0]);
+                    tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{0,1,0}}, ydeg[0]);
                 }
+
+                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
                 for (xt::xarray<double> tri : tri_prism_tf.obj_w)
                 {
                     xt::xarray<double> res = tri;
@@ -104,7 +105,6 @@ main(int ac, char* av[])
                     //persp proj
                     // Calculate Camera Transform
                     //res = res - cam_pos;
-                    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
                     // v1 -> v2
                     SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
                             xt::view(res,1)[0], xt::view(res,1)[1]);

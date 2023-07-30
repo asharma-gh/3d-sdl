@@ -66,9 +66,13 @@ struct Quat {
 
 //////////////////////
 /// Library functions
+    double norm_sq() const
+    {
+        return w*w + (xt::sum<double>(this->vec3 * this->vec3))[0];
+    }
     double norm() const
     {
-        return sqrt(w*w + xt::linalg::norm(this->vec3, 2));
+        return sqrt(this->norm_sq());
     }
     void normalize()
     {
@@ -85,12 +89,23 @@ struct Quat {
     }
     const Quat inverse() const 
     {
-        // q_inv = q_conj / norm^2
-        double tnorm = this->norm();
-        tnorm *= tnorm;
-        return this->conjugate() / tnorm;
+        // q_inv = q_conj / norm^2;
+        return this->conjugate() / this->norm_sq();
     }
-
+    const xt::xarray<double> get_rotation_matrix_q()
+    {
+        // converts this Quaternion into a rotation matrix
+        double w = this->w;
+        double x = this->vec3[0];
+        double y = this->vec3[1];
+        double z = this->vec3[2];
+        return xt::xarray<double>{
+            {2*(w*w + x*x) - 1, 2*(x*y - w*z),     2*(x*z + w*y), 0},
+            {2*(x*y + w*z),     2*(w*w + y*y) - 1, 2*(y*z - w*x), 0},
+            {2*(x*z - w*y),     2*(y*z + w*x),     2*(w*w + z*z), 0},
+            {0,                 0,                 0,             1}
+        };
+    }
 /////////////////////
 /// Static functions
     static const Quat get_rotation_quat(const xt::xarray<double>& axis, double theta)

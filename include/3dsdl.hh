@@ -52,50 +52,20 @@ struct Tform {
     void rotate_along_axis_q(const xt::xarray<double>& axis, double theta)
     {
         Quat rot_q = Quat::get_rotation_quat(axis, theta);
-        // apply to local coordinates
-        xt::xarray<double> updated_loc_v = Quat::apply_rotation_quat(rot_q, this->local_vec3());
-        this->update_local_from_vec3(updated_loc_v);
-        // apply to current rotation
-        this->local_rot_q *= rot_q;
-        // apply to world
-        this->local_to_world();
-    }
-    void local_to_world()
-    { 
-        xt::xarray<double> lvec= this->local_vec3();
-        xt::xarray<double> tmat = {
-            {1, 0, 0, lvec[0]},
-            {0, 1, 0, lvec[1]},
-            {0, 0, 1, lvec[2]},
-            {0, 0, 0, 1},
-        };
-        // construct rotation matrix
-        xt::xarray<double> xbasis = {{1,0,0}};
-        xt::xarray<double> ybasis = {{0,1,0}};
-        xt::xarray<double> zbasis = {{0,0,1}};
-        xbasis = Quat::apply_rotation_quat(this->local_rot_q, xbasis);
-        ybasis = Quat::apply_rotation_quat(this->local_rot_q, ybasis);
-        zbasis = Quat::apply_rotation_quat(this->local_rot_q, zbasis);
-
-        xt::xarray<double> rotation_mat = xt::stack(xt::xtuple(xbasis, ybasis, zbasis)).reshape({3,3});
-        // combine rotation and scale matrix
-        for (int ii=0;ii<3;ii++)
-            rotation_mat(ii,ii) *= scale(ii);
-
-        
-        LOG(this->local_rot_q);
-        // fetch 3x3 section of local->world mat
-        auto mat_view3x3 = xt::view(tmat, xt::range(0, 3), xt::range(0, 3));
-        mat_view3x3 = rotation_mat;
-
-        // Apply to world coordinates
-        this->world = xt::linalg::dot(tmat, this->world);
-        // Apply to object
-        for (int ii = 0; ii < obj.size(); ii++)
+        xt::xarray<double> rotation_mat = rot_q.get_rotation_matrix_q();
+        LOG(rotation_mat);
+        for (int ii = 0; ii < obj_w.size(); ii++)
         {
-            this->obj_w.push_back(xt::linalg::dot(this->world, *(this->obj[ii])));
+            this->obj_w[ii] = (xt::linalg::dot(rotation_mat, this->obj_w[ii]));
         }
 
+    }
+    void reset_transforms()
+    {
+        //TODO: local -> world. Currently local==world
+        this->obj_w.clear();
+        for (int ii = 0; ii < obj.size(); ii++)
+            this->obj_w.push_back(*(this->obj[ii]));
     }
     void update_local_from_vec3(const xt::xarray<double>& invec)
     {
