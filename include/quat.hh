@@ -124,5 +124,4 @@ struct Quat {
         Quat quat = Quat(0, vec);
         return (rot_q*quat*rot_q.inverse()).vec3;
     }
-
 };//end struct

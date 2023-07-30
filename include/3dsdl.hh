@@ -60,6 +60,30 @@ struct Tform {
         }
 
     }
+    const xt::xarray<double> centroid_basis() const
+    {
+        // compute centroid
+        double xu=0.0;
+        double yu=0.0;
+        double zu=0.0;
+        int sz = obj_w.size();
+        for (int ii=0;ii<sz;ii++)
+        {
+            xu += obj_w[ii][0];
+            yu += obj_w[ii][1];
+            zu += obj_w[ii][2];
+        }
+        xt::xarray<double> centroid_p = {{xu/sz, yu/sz, zu/sz, 1}};
+        // compute moment of intertia
+        std::vector<xt::xarray<double>> dev_cenp;
+        for (int ii=0;ii<sz;ii++)
+            dev_cenp.push_back(obj_w[ii] - centroid_p); // x-u
+        // moment of inertia
+
+        // compute principal axes
+        // choose center axis
+        //std::tuple<xt::xarray<double>, xt::xarray<double>> eigval = xt::linalg::eig(sum_udev); //(eval, evec)
+    }
     void reset_transforms()
     {
         //TODO: local -> world. Currently local==world
@@ -112,34 +136,34 @@ int cam_vel_x = 1; // x velociy
 /////////////////////////////
 //Prism Object parameters
 xt::xarray<double> tri_1 = {
-    {-100, 0, 100, 1},
-    {0, 100, 200, 1},
-    {100, 0, 100, 1},
+    {-100, 0, 0, 1},
+    {0, 100, 50, 1},
+    {100, 0, 0, 1},
     {0,   0, 0, 1}
 };
 xt::xarray<double> tri_2 = {
-    {-100, 0, 300, 1},
-    {0, 100, 200, 1},
-    {100, 0, 300, 1},
-    {0,   0, 0, 1}
-};
-xt::xarray<double> tri_3 = {
-    {100, 0, 300, 1},
-    {0, 100, 200, 1},
+    {-100, 0, 100, 1},
+    {0, 100, 50, 1},
     {100, 0, 100, 1},
     {0,   0, 0, 1}
 };
+xt::xarray<double> tri_3 = {
+    {100, 0, 100, 1},
+    {0, 100, 50, 1},
+    {100, 0, 0, 1},
+    {0,   0, 0, 1}
+};
 xt::xarray<double> tri_4 = {
-    {-100, 0, 300, 1},
-    {0, 100, 200, 1},
     {-100, 0, 100, 1},
+    {0, 100, 50, 1},
+    {-100, 0, 0, 1},
     {0,    0, 0, 1}
 };
 std::vector<xt::xarray<double>*> tobj = {
     &tri_1,
-    &tri_2,
-    &tri_3,
-    &tri_4
+    //&tri_2,
+    //&tri_3,
+    //&tri_4
 };
 Tform tri_prism_tf(tobj);
 

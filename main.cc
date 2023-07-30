@@ -91,7 +91,7 @@ main(int ac, char* av[])
                 {
                     tri_prism_tf.reset_transforms();
                     tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{1,0,0}}, xdeg[0]);
-                    tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{0,1,0}}, ydeg[0]);
+                    //tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{0,1,0}}, ydeg[0]);
                 }
 
                 SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
