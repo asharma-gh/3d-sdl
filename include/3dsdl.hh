@@ -52,15 +52,25 @@ struct Tform {
     void rotate_along_axis_q(const xt::xarray<double>& axis, double theta)
     {
         Quat rot_q = Quat::get_rotation_quat(axis, theta);
-        xt::xarray<double> rotation_mat = rot_q.get_rotation_matrix_q();
-        LOG(rotation_mat);
+        //xt::xarray<double> rotation_mat = rot_q.get_rotation_matrix_q();
+        //LOG(rotation_mat);
+        xt::xarray<double> centroid = this->get_centroid();
         for (int ii = 0; ii < obj_w.size(); ii++)
         {
-            this->obj_w[ii] = (xt::linalg::dot(rotation_mat, this->obj_w[ii]));
+            // translate each point about the centroid of obj_i to origin and perform rotation
+            for (int jj = 0; jj < 3; jj++)
+            {
+                xt::xarray<double> row = xt::view(obj_w[ii], jj, xt::all());
+                row -= centroid;
+                xt::xarray<double> rv = Quat::apply_rotation_quat(rot_q, {{row[0], row[1], row[2]}});
+                row = xt::xarray<double>{rv[0], rv[1], rv[2], 0};
+                row += centroid;
+                xt::view(obj_w[ii], jj, xt::all()) = row;
+            }
         }
 
     }
-    const xt::xarray<double> centroid_basis() const
+    const xt::xarray<double> get_centroid() const
     {
         // compute centroid
         double xu=0.0;
@@ -73,16 +83,7 @@ struct Tform {
             yu += obj_w[ii][1];
             zu += obj_w[ii][2];
         }
-        xt::xarray<double> centroid_p = {{xu/sz, yu/sz, zu/sz, 1}};
-        // compute moment of intertia
-        std::vector<xt::xarray<double>> dev_cenp;
-        for (int ii=0;ii<sz;ii++)
-            dev_cenp.push_back(obj_w[ii] - centroid_p); // x-u
-        // moment of inertia
-
-        // compute principal axes
-        // choose center axis
-        //std::tuple<xt::xarray<double>, xt::xarray<double>> eigval = xt::linalg::eig(sum_udev); //(eval, evec)
+        return xt::xarray<double> {xu/sz, yu/sz, zu/sz, 1};
     }
     void reset_transforms()
     {
@@ -161,9 +162,9 @@ xt::xarray<double> tri_4 = {
 };
 std::vector<xt::xarray<double>*> tobj = {
     &tri_1,
-    //&tri_2,
-    //&tri_3,
-    //&tri_4
+    &tri_2,
+    &tri_3,
+    &tri_4
 };
 Tform tri_prism_tf(tobj);
 
