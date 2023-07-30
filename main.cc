@@ -1,15 +1,4 @@
-
-#include "xtensor/xarray.hpp"
-#include "xtensor/xmath.hpp"
-#include "xtensor/xio.hpp"
-#include <xtensor/xaxis_slice_iterator.hpp>
-#include "xtensor-blas/xlinalg.hpp"
-#include <SDL2/SDL.h>
-#include <iostream>
-#include <string>
-#include <vector>
-const int S_WIDTH = 800;
-const int S_HEIGHT = 600;
+#include "3dsdl.hh"
 
 int 
 main(int ac, char* av[])
@@ -25,77 +14,82 @@ main(int ac, char* av[])
     // Event handling
     SDL_Event event; 
     bool quit = false;
-    while(quit == false)
+    uint64_t cur_ticks = 0;
+    bool is_frame = false;
+    while (quit == false)
     { 
-        SDL_WaitEvent(&event);
+        uint64_t tick_start = SDL_GetTicks();
+        if ((cur_ticks / 1000) >= 1/60)
+        {
+            // update physics once per frame
+            is_frame = true; // update in case code below needs to update this frame
+            if (cam_vel != 0)
+            {
+                cam_vel += (-1 * (cam_vel < 0) + (cam_vel > 0)) * cam_rev_accel;
+            }
+            if (cam_vel_x != 0)
+            {
+                cam_vel_x += (-1 * (cam_vel_x < 0) + (cam_vel_x > 0)) * cam_rev_accel;
+            }
+            cam_pos.world(2,2) += cam_vel; // z dir
+            cam_pos.world(0,0) += cam_vel_x; // x dir
+            // update camera physics
+            cur_ticks = 0; // reset tick counter for next frame
+        }
+        // wait for event every 25 ms so frame time uniformly updates
+        SDL_WaitEventTimeout(&event, 25);
         switch (event.type)
         {
             case SDL_QUIT:
                 quit = true;
                 break;
+            case SDL_KEYDOWN:
+                switch(event.key.keysym.sym)
+                {
+                    case SDLK_w:
+                        LOG("W");
+                        cam_vel += cam_accel;
+                        break;
+                    case SDLK_a:
+                        cam_vel_x -= cam_accel;
+                        break;
+                    case SDLK_s:
+                        cam_vel -= cam_accel;
+                        break;
+                    case SDLK_d:
+                        cam_vel_x += cam_accel;
+                        break;
+                }
             case SDL_MOUSEMOTION:
-                // TODO: Setup render thread
-                int mX = event.motion.x - S_WIDTH/2;
-                int mY = -1*event.motion.y + S_HEIGHT/2;
-                //std::cout<<mX<< " "<<mY<<std::endl;
+                // normalized screen coordinates such that Moving to the right increments X from the center
+                // and moving the mouse up increments Y from the center
+                double mX = double(event.motion.x - S_WIDTH/2)/S_WIDTH/2;
+                double mY = double(-1*event.motion.y + S_HEIGHT/2)/S_HEIGHT/2;
                 // scalars are 1d arrays in xt
-                double xd = 6.28/(S_WIDTH); // each pixel in range [0, 2pi]
-                double yd = 6.28/(S_HEIGHT); 
                 xt::xarray<double> xdeg;
-                xdeg = xd*mX;
+                xdeg = 3.14*2*mY;
                 xt::xarray<double> ydeg;
-                ydeg = yd*mY;
-                // compute rotation matrix around x and y axis
-                xt::xarray<double> xdir { //rotating in the x direction is around the y axis
-                    {xt::cos(xdeg)[0], 0, -1*(xt::sin(xdeg)[0])},
-                    {0               , 1,  0                   },
-                    {xt::sin(xdeg)[0], 0,  xt::cos(xdeg)[0]    }
-                };
-                xt::xarray<double> ydir {
-                    {1,   0,                   0               },
-                    {0,   xt::cos(ydeg)[0],    xt::sin(ydeg)[0]},
-                    {0,   -1*xt::sin(ydeg)[0], xt::cos(ydeg)[0]},
-                };
-                xt::xarray<double> tmat = xt::linalg::dot(xdir,ydir);
-                xt::xarray<double> tri_1 = {
-                    {-100, 0, 0},
-                    {0, 100, 100},
-                    {100, 0, 0}
-                };
-                xt::xarray<double> tri_2 = {
-                    {-100, 0, 200},
-                    {0, 100, 100},
-                    {100, 0, 200}
-                };
-                xt::xarray<double> tri_3 = {
-                    {100, 0, 200},
-                    {0, 100, 100},
-                    {100, 0, 0}
-                };
-                xt::xarray<double> tri_4 = {
-                    {-100, 0, 200},
-                    {0, 100, 100},
-                    {-100, 0, 0}
-                };
-                std::vector<xt::xarray<double>*> tri_prism = {
-                    &tri_1,
-                    &tri_2,
-                    &tri_3,
-                    &tri_4
-                };
+                ydeg = 3.14*2*mX;
+                //LOG(mX, " ", mY);
+                //LOG(xdeg, " ", ydeg);
                 SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderClear(renderer);
-                for (xt::xarray<double>* tri_ptr : tri_prism)
+                // Rotate the tri prism
+                if (is_frame)
                 {
-                    xt::xarray<double> tri = *tri_ptr;
-                    xt::xarray<double> res = xt::linalg::dot(tri,tmat);
-                    // translate tri around screen center
-                    xt::xarray<double> tri_sc = {
-                        {S_WIDTH/2, S_HEIGHT/2, 0}
-                    };
-                    res = res + xt::view(tri_sc, 0);
+                    tri_prism_tf.reset_transforms();
+                    tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{1,0,0}}, xdeg[0]);
+                    tri_prism_tf.rotate_along_axis_q(xt::xarray<double>{{0,1,0}}, ydeg[0]);
+                }
 
-                    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+                for (xt::xarray<double> tri : tri_prism_tf.obj_w)
+                {
+                    xt::xarray<double> res = tri;
+                    xt::xarray<double> tri_sc = {
+                        {S_WIDTH/2, S_HEIGHT/2, 0, 0}
+                    };
+                    res = res+xt::view(tri_sc, 0);
                     // v1 -> v2
                     SDL_RenderDrawLine(renderer, xt::view(res,0)[0], xt::view(res,0)[1], 
                             xt::view(res,1)[0], xt::view(res,1)[1]);
@@ -105,11 +99,13 @@ main(int ac, char* av[])
                     // v2 -> v3
                     SDL_RenderDrawLine(renderer, xt::view(res,1)[0], xt::view(res,1)[1], 
                             xt::view(res,2)[0], xt::view(res,2)[1]);
-
                 }
                 SDL_RenderPresent(renderer);
         }
+        cur_ticks += (SDL_GetTicks() - tick_start);
     }
+
+
     SDL_DestroyWindow(w);
     SDL_Quit();
     return 0;
