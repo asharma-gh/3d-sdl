@@ -63,7 +63,6 @@ struct Quat {
         res.w /= rhs;
         return res;
     }
-
 //////////////////////
 /// Library functions
     double norm_sq() const
@@ -125,3 +124,4 @@ struct Quat {
         return (rot_q*quat*rot_q.inverse()).vec3;
     }
 };//end struct
+

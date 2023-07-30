@@ -109,6 +109,8 @@ struct Tform {
         return xt::xarray<double> {{local(0,0), local(1,1), local(2,2)}};
     }
 };//end struct
+
+// TODO: Clean this part up, temporarily placing here.
 ///////////////////////////
 const int S_WIDTH = 800;
 const int S_HEIGHT = 600;
